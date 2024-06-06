@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'blog/style.css' %}" />
+
+    <script src="https://code.jquery.com/jquery-3.7.1.js"
+            integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #chatbot-container {
+            width: 80%;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        #chatbot {
+            width: 100%;
+            height: 70vh;
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #1e1e1e;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .botText,
+        .userText {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            margin: 5px 0;
+            padding: 10px 15px;
+            border-radius: 20px;
+            line-height: 1.5;
+            width: fit-content;
+            max-width: 80%;
+        }
+
+        .botText {
+            text-align: left;
+            background-color: #333;
+            color: #e0e0e0;
+            margin-right: auto;
+        }
+
+        .userText {
+            text-align: right;
+            background-color: #007bff;
+            color: #ffffff;
+            margin-left: auto;
+        }
+
+        #userInput {
+            width: 100%;
+            text-align: center;
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #textInput {
+            padding: 16px;
+            font-size: 16px;
+            border: 1px solid #444;
+            border-radius: 20px;
+            width: 70%;
+            margin-right: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+
+        #buttonInput {
+            padding: 16px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 20px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        #buttonInput:hover {
+            background-color: #0056b3;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: #333;
+        }
+
+        .loading__container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 5px 0;
+            padding: 10px 15px;
+            border-radius: 20px;
+            line-height: 1.5;
+            width: fit-content;
+            max-width: 80%;
+            background-color: #333;
+            color: #e0e0e0;
+        }
+
+        .loading__dot {
+            animation: dot ease-in-out 1s infinite;
+            background-color: grey;
+            display: inline-block;
+            height: 10px;  /* Reduced size */
+            margin: 5px;   /* Reduced margin */
+            width: 10px;   /* Reduced size */
+        }
+
+        .loading__dot:nth-of-type(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading__dot:nth-of-type(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes dot {
+            0% { background-color: grey; transform: scale(1); }
+            50% { background-color: #bada55; transform: scale(1.3); }
+            100% { background-color: grey; transform: scale(1); }
+        }
+    </style>
+</head>
+
+<body>
+<div id="chatbot-container">
+    <h1>Chatbot</h1>
+    <div id="chatbot">
+        <p class="botText"><span>Hi There</span></p>
+    </div>
+
+    <div id="userInput">
+        <input type="text" id="textInput" name="userMessage" placeholder="Type your message..." />
+        <input type="submit" value="Send" id="buttonInput" />
+    </div>
+</div>
+
+<script>
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/'
+    );
+
+    chatSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+        const botMessage = data.message;
+
+        // Remove loader
+        $('.loading__container').remove();
+
+        const botHTML = "<p class='botText'><span>" + botMessage + "</span></p>";
+        $('#chatbot').append(botHTML);
+        $('#chatbot').scrollTop($('#chatbot')[0].scrollHeight);
+    };
+
+    chatSocket.onclose = function (e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    function getUserResponse() {
+        const userText = $('#textInput').val();
+        const userHTML = "<p class='userText'><span>" + userText + "</span></p>";
+        $('#textInput').val("");
+        $('#chatbot').append(userHTML);
+
+        const loaderHTML = `
+                <div class='loading__container'>
+                    <span class='loading__dot'></span>
+                    <span class='loading__dot'></span>
+                    <span class='loading__dot'></span>
+                </div>`;
+        $('#chatbot').append(loaderHTML);
+        $('#chatbot').scrollTop($('#chatbot')[0].scrollHeight);
+
+        chatSocket.send(JSON.stringify({
+            'message': userText
+        }));
+    }
+
+    $('#buttonInput').click(function () {
+        getUserResponse();
+    });
+
+    // Trigger send button click event when Enter key is pressed in the text input
+    $('#textInput').keypress(function (event) {
+        if (event.which === 13) { // Check if Enter key is pressed
+            event.preventDefault(); // Prevent default Enter key behavior (line break)
+            $('#buttonInput').click(); // Trigger send button click event
+        }
+    });
+</script>
+</body>
+
+</html>
